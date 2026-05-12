@@ -133,7 +133,7 @@ app.use((err, req, res, next) => {
     const isProd= config.IS_PROD
      const payload = {
     status,
-    error: err.publicMessage || err.message || "Bug serveur interne",
+    error: isProd ? "Erreur serveur interne" : err.publicMessage || err.message || "Bug serveur interne",
     ...(isProd ? {} : { stack: err.stack }), // stack visible seulement en dev
   };
 

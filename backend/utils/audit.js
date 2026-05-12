@@ -15,7 +15,7 @@ export default async function audit(req, payload){
     } 
 
     try{
-        AuditsEvents.create(base)
+        await AuditsEvents.create(base)
     } catch(e){
         console.log("[MongoDB], l'audit ne s'est pas enregistré sur MongoDB")
     }
