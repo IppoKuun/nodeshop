@@ -1,15 +1,10 @@
-// lib/api.js
 import axios from "axios";
+import { API_BASE_URL } from "./api-base-url";
 
-const env = (process.env.NODE_ENV || "").toLowerCase();
-const isDev = (process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV || "").toLowerCase() !== "production";
-const explicitBaseUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-const devBaseUrl = process.env.NEXT_PUBLIC_API_URL_DEV || "http://localhost:4000";
-const prodBaseUrl = process.env.NEXT_PUBLIC_API_URL_PROD || devBaseUrl;
-const baseURL = explicitBaseUrl || (isDev ? devBaseUrl : prodBaseUrl);
+const isDev = process.env.NODE_ENV !== "production";
 
 const api = axios.create({
-  baseURL,
+  baseURL: API_BASE_URL,
   withCredentials: true,
   timeout: 10000,
 });
@@ -32,7 +27,7 @@ api.interceptors.response.use(
   (res) => res.data,
   (err) => {
     // Ignorer proprement les requêtes annulées
-    if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
+    if (err?.code === "ERR_CANCELED" || err?.name === "CanceledError") {
       return Promise.reject({ canceled: true });
     }
 
@@ -52,7 +47,7 @@ api.interceptors.response.use(
         data: err.response?.data,
         url: err.config?.url,
         method: err.config?.method,
-        axios: err.toJSON ? err.toJSON() : err, // fallback brut
+        axios: err.toJSON ? err.toJSON() : err,
       });
     }
 
@@ -60,8 +55,6 @@ api.interceptors.response.use(
   }
 );
 
-
-// Méthodes utilitaires
 const get = (url, config) => api.get(url, config);
 const post = (url, data, config) => api.post(url, data, config);
 const del = (url, config) => api.delete(url, config);
