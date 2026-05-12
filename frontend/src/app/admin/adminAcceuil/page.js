@@ -24,8 +24,9 @@ export default function DashboardPage(){
     ;(async () => {
       try {
         setLoading(true)
-        // Axios renvoie déjà res.data via l'interceptor → pas de {data:…}
-        const [h, p, a] = await Promise.all([
+        setErr(null)
+        // Axios renvoie déjà res.data via l'interceptor -> pas de {data:...}
+        const [healthResult, productsResult, auditsResult] = await Promise.allSettled([
           api.get("/health", { signal: controller.signal }),
           api.get("/products", {
             params: { limit: 5, sortBy: "createdAt", order: "desc" },
@@ -37,12 +38,36 @@ export default function DashboardPage(){
           }),
         ])
 
-        setHealth(h?.ok ? "up" : "down")
-        setRecentProducts(p?.items ?? [])
-        setRecentsAudits(a?.items ?? [])
-        setTtprod(p?.meta?.total ?? p?.items?.length ?? 0)
+        if (healthResult.status === "fulfilled") {
+          setHealth(healthResult.value?.ok ? "up" : "down")
+        } else {
+          setHealth("down")
+        }
+
+        if (productsResult.status === "fulfilled") {
+          const p = productsResult.value
+          setRecentProducts(p?.items ?? [])
+          setTtprod(p?.meta?.total ?? p?.items?.length ?? 0)
+        }
+
+        if (auditsResult.status === "fulfilled") {
+          setRecentsAudits(auditsResult.value?.items ?? [])
+        }
+
+        const failures = [
+          ["/health", healthResult],
+          ["/products", productsResult],
+          ["/audits", auditsResult],
+        ]
+          .filter(([, result]) => result.status === "rejected")
+          .map(([route, result]) => {
+            const reason = result.reason
+            return `${route}: ${reason?.status || reason?.code || ""} ${reason?.msg || reason?.data?.error || reason?.message || "Erreur inconnue"}`.trim()
+          })
+
+        if (failures.length) setErr(failures.join(" | "))
       } catch (e) {
-        if (e?.name !== "CanceledError") setErr(e?.msg || e?.data?.error || e?.message || "Erreur inconnue")
+        if (!e?.canceled && e?.name !== "CanceledError") setErr(e?.msg || e?.data?.error || e?.message || "Erreur inconnue")
       } finally {
         setLoading(false)
       }
