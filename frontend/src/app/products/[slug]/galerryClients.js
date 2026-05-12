@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useEffect, useState, useCallback } from "react";
 
 
@@ -39,14 +40,12 @@ export default function GalleryClient({ images = [], alt = "Produit" }) {
         onClick={() => { setI(0); setOpen(true); }}
         aria-label="Ouvrir la galerie"
       >
-        <img
+        <Image
           src={valid[0]}
           alt={alt}
           className="w-full h-auto object-cover group-hover:opacity-95"
         />
-        {/* Si tu préfères next/image :
-        <Image src={valid[0]} alt={alt} width={1200} height={900} className="w-full h-auto object-cover" />
-        */}
+
       </button>
 
       {/* Thumbnails */}
