@@ -9,6 +9,8 @@ import MongoStore from "connect-mongo"
 import {auditRouter} from "./routes/auditRoutes.js"
 import {productRouter} from "./routes/product.routes.js"
 import { authRouter } from "./routes/auth.routes.js"
+import requireAuth from "./middlewares/requireAuth.js"
+import { checkOrigin } from "./middlewares/CSRF.js"
 import cors from "cors"
 import crypto from "crypto"
 
@@ -43,7 +45,6 @@ app.use(cors({
   },
   credentials: true
 }))
-app.use(express.json());
 app.options("*", cors({ origin: allowedOrigins, credentials: true }));
 
 app.use(express.json({ limit: "1mb" }));
@@ -87,8 +88,8 @@ app.use(
 
 app.use("/products", productRouter)
 app.use("/auth", authRouter)
-app.use("/audits", auditRouter)
-app.post("/cloudinary/sign", (req, res) => {
+app.use("/audits", requireAuth(["owner", "admin"]), auditRouter)
+app.post("/cloudinary/sign", checkOrigin, requireAuth(["owner", "admin"]), (req, res) => {
   const { folder } = req.body;
   const timestamp = Math.round(Date.now() / 1000);
 
@@ -120,12 +121,6 @@ app.get("/health", (req, res) => {
     time: new Date().toISOString(),
   });
 });
-
-import { loginRateLimiter } from "./middlewares/rateLimits.js"
-import login from "./controllers/auth/login.js"
-app.post("/auth/login", loginRateLimiter, login)
-
-
 
 app.use((req, res) => res.status(404).json({ error: "Not Found" }));
 app.use((err, req, res, next) => {

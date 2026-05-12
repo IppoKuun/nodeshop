@@ -35,8 +35,10 @@ const RAW = {
     NODE_ENV : process.env.NODE_ENV || "",
     MONGO_Url : process.env.MONGO_Url || "",
     SESSION_SECRET : process.env.SESSION_SECRET || "",
+    SESSION_NAME: process.env.SESSION_NAME || "",
     COOKIE_SAME_SITE:process.env.COOKIE_SAME_SITE || "",
     COOKIE_SECURE:process.env.COOKIE_SECURE || "",  
+    COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || "",
     TRUST_PROXY: process.env.TRUST_PROXY || "",
     SESSION_MAX_AGE: process.env.SESSION_MAX_AGE || String(7*24*60*60),
     
@@ -44,15 +46,20 @@ const RAW = {
 
 //parser
 const PORT = helpers.toInt(RAW.PORT, 4000)
-const COOKIE_SECURE = IS_PROD;
 const TRUST_PROXY = helpers.toBool(RAW.TRUST_PROXY, false);
-const COOKIE_SAME_SITE = (RAW.COOKIE_SAME_SITE || "lax").trim().toLowerCase();
+const COOKIE_SAME_SITE = (RAW.COOKIE_SAME_SITE || (IS_PROD ? "none" : "lax")).trim().toLowerCase();
+const COOKIE_SECURE = RAW.COOKIE_SECURE
+  ? helpers.toBool(RAW.COOKIE_SECURE, IS_PROD)
+  : IS_PROD || COOKIE_SAME_SITE === "none";
 const SESSION_MAX_AGE_MS = helpers.toInt(RAW.SESSION_MAX_AGE, 7*24*60*60) * 1000;
 
 
 if (IS_PROD) {
   if (!RAW.MONGO_Url) throw new Error("[ENV] MONGO_Url requis en production");
   if (!RAW.SESSION_SECRET) throw new Error("[ENV] SESSION_SECRET requis en production");
+}
+if (!["lax", "strict", "none"].includes(COOKIE_SAME_SITE)) {
+  throw new Error("[ENV] COOKIE_SAME_SITE doit valoir lax, strict ou none");
 }
 if (COOKIE_SAME_SITE === "none" && !COOKIE_SECURE) {
   throw new Error("[ENV] SameSite=None exige Secure=true (HTTPS)");
