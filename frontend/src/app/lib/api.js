@@ -7,6 +7,17 @@ const api = axios.create({
   timeout: 10000,
 });
 
+const getRequestUrl = (config = {}) => {
+  const baseURL = config.baseURL || API_BASE_URL;
+  const url = config.url || "";
+
+  try {
+    return new URL(url, `${baseURL}/`).toString();
+  } catch {
+    return `${baseURL}${url}`;
+  }
+};
+
 // Interceptor Request
 api.interceptors.request.use((config) => {
   config.headers = config.headers || {};
@@ -35,8 +46,21 @@ api.interceptors.response.use(
 
     const status = err.response?.status;
     const data = err.response?.data;
+    const diagnostic = {
+      message: msg,
+      status,
+      code: err.code,
+      method: err.config?.method?.toUpperCase(),
+      url: getRequestUrl(err.config),
+      hasResponse: Boolean(err.response),
+      data,
+    };
 
-    return Promise.reject({ msg, status, data });
+    if (typeof window !== "undefined") {
+      console.error("[api] request failed", diagnostic);
+    }
+
+    return Promise.reject({ msg, status, data, code: err.code, url: diagnostic.url });
   }
 );
 

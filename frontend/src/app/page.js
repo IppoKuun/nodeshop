@@ -269,7 +269,7 @@ export default function Home() {
 
         {err && (
           <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
-            API indisponible pour le moment. Lance le backend pour charger le catalogue.
+            Serveur indisponible pour le moment
           </div>
         )}
 

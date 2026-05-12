@@ -35,13 +35,16 @@ const app = express()
 const rawOrigins = process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "http://localhost:3000"
 const allowedOrigins = rawOrigins
   .split(",")
-  .map((o) => o.trim())
+  .map((o) => o.trim().replace(/\/$/, ""))
   .filter(Boolean)
 
 app.use(cors({
   origin(origin, cb) {
     if (!origin) return cb(null, true) // requêtes server-to-server
-    return allowedOrigins.includes(origin) ? cb(null, true) : cb(new Error("CORS blocked"))
+    const normalizedOrigin = origin.replace(/\/$/, "")
+    if (allowedOrigins.includes(normalizedOrigin)) return cb(null, true)
+    console.warn(`[cors] blocked origin: ${origin}`)
+    return cb(new Error("CORS blocked"))
   },
   credentials: true
 }))
