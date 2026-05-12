@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import logo from "@/app/logo.png"; // ou "/logo.png" si tu l'as en /public
+import logo from "@/app/logo.png"; 
 
 
 
