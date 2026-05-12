@@ -24,10 +24,8 @@ async function uploadToCloudinary(file) {
   form.append("timestamp", sig.timestamp)
   form.append("api_key", sig.apiKey)
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, { method: "POST", body: form })
-  console.log("CLOUD NAME =>", process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
   const json = await res.json()
   if (!json) { throw new Error("Erreur d'upload Cloudinary") }
-  console.log("Cloudinary upload response:", json); // <= TEMP: regarde secure_url / public_id
   return { public_id: json.public_id, url: json.secure_url, alt: file.name }
 }
 
@@ -77,7 +75,7 @@ export default function ImagesField({ fields }) {
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
         <SortableContext items={images.map((x) => x.public_id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
-            {images.length === 0 && (<div className="text-sm text-gray-500">Aucune image pour l'instant.</div>)}
+            {images.length === 0 && (<div className="text-sm text-gray-500">Aucune image pour l&apos;instant.</div>)}
             {images.map((img) => (
               <SortableImage key={img.public_id} id={img.public_id} url={img.url} alt={img.alt} />
             ))}

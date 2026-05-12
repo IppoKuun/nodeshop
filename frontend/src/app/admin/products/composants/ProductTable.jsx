@@ -25,7 +25,7 @@ export default function ProductTable({ loading, products, onEdit, onDeleted }) {
           )}
           {!loading && products.length === 0 && (
             <tr>
-              <td className="px-4 py-3 text-slate-500" colSpan={4}>Aucun produit pour l'instant</td>
+              <td className="px-4 py-3 text-slate-500" colSpan={4}>Aucun produit pour l&apos;instant</td>
             </tr>
           )}
           {!loading && products.map((p) => (

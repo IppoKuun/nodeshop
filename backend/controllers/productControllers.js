@@ -73,7 +73,7 @@ async function deleteProduct(req, res){
   const id = req.params.id
   const allowedPart = buildSafePatch(req.body, ["name", "description", "price", "category", "slug",
     "shortDesc", "images", "isActive",]);
-  const updProduct = await Product.findByIdAndUpdate(id, allowedPart, {new:true})
+  const updProduct = await Product.findByIdAndUpdate(id, allowedPart, {new:true, runValidators: true})
     if (!updProduct){ return res.status(404).json({message: "Produit introuvable"})}
      await audit(req, {
       event: "product.update",

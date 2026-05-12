@@ -48,8 +48,7 @@ export default function LogsPage() {
         ...(res?.meta || {}),
         total: res?.meta?.total ?? (Array.isArray(list) ? list.length : m.total),
       }))
-    } catch (e) {
-      console.error(e?.msg || e?.message || "Erreur de chargement des logs")
+    } catch {
     } finally {
       setLoading(false)
     }

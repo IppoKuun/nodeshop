@@ -67,11 +67,9 @@ export default function Home() {
           name: i.name,
         }));
         setAllproducts(safeItems);
-        console.log("CLOUD NAME =>", process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME);
 
       } catch (e) {
         if (e?.canceled) return;
-        console.error("GET /products failed:", e);
         const msg = e?.msg || e?.message || e?.data?.error || "Network error";
         setErr(msg);
       } finally { setLoading(false); }

@@ -1,15 +1,11 @@
 import axios from "axios";
 import { API_BASE_URL } from "./api-base-url";
 
-const isDev = process.env.NODE_ENV !== "production";
-
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
   timeout: 10000,
 });
-
-console.log("[axios] baseURL =", api.defaults.baseURL);
 
 // Interceptor Request
 api.interceptors.request.use((config) => {
@@ -39,17 +35,6 @@ api.interceptors.response.use(
 
     const status = err.response?.status;
     const data = err.response?.data;
-
-    if (isDev) {
-      console.error("[AXIOS ERROR]", {
-        status: err.response?.status,
-        msg,
-        data: err.response?.data,
-        url: err.config?.url,
-        method: err.config?.method,
-        axios: err.toJSON ? err.toJSON() : err,
-      });
-    }
 
     return Promise.reject({ msg, status, data });
   }

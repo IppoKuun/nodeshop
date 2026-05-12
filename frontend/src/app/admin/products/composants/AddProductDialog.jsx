@@ -39,7 +39,6 @@ export default function AddProductDialog({parOpen, setparOpen, onCreated}) {
             setparOpen(false)
             } catch (e) {
             toast.error(e?.msg || e?.data?.error || e?.message || "Impossible de créer le produit");
-            console.error(e)
             }
   
     }
