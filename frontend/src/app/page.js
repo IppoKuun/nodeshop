@@ -1,42 +1,62 @@
 "use client";
-import Link from "next/link";
+
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, SlidersHorizontal, RotateCcw, ChevronLeft, ChevronRight, LogIn } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
+  Plus,
+  RotateCcw,
+  Search,
+  ShoppingCart,
+  SlidersHorizontal,
+} from "lucide-react";
 import api from "./lib/api";
-import logo from "../../public/logo.png";
 
+const getCategories = (products, selectedCategory) => {
+  const categories = products.map((p) => p.category).filter(Boolean);
+  if (selectedCategory && selectedCategory !== "toutes") {
+    categories.push(selectedCategory);
+  }
+  return ["toutes", ...Array.from(new Set(categories)).sort()];
+};
 
-
-const getCategories = (products) => {
-  const cat = products.map((p) => p.category);
-  const s = new Set(cat);
-  return ["toutes", ...Array.from(s)];
+const formatCategory = (category) => {
+  if (!category || category === "toutes") return "All Categories";
+  return category.charAt(0).toUpperCase() + category.slice(1);
 };
 
 export default function Home() {
   const [products, setAllproducts] = useState([]);
-  const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(100);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const [category, setCategory] = useState("toutes");
-
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [sort, setSort] = useState("default");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(12);
+  const [limit] = useState(8);
   const [meta, setMeta] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const currency = useMemo(
-    () => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }),
+    () =>
+      new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "EUR",
+        maximumFractionDigits: 2,
+      }),
     []
   );
 
   const params = useMemo(() => {
-    const p= {}
+    const p = {};
     if (category && category !== "toutes") p.category = category;
-    if (minPrice !== "") p['price[min]']  = Number(minPrice);
-    if (maxPrice !== "") p['price[max]'] = Number(maxPrice);
+    if (minPrice !== "") p["price[min]"] = Number(minPrice);
+    if (maxPrice !== "") p["price[max]"] = Number(maxPrice);
     if (sort === "asc" || sort === "desc") {
       p.sortBy = "price";
       p.order = sort;
@@ -46,245 +66,351 @@ export default function Home() {
     return p;
   }, [category, minPrice, maxPrice, page, limit, sort]);
 
-  useEffect(() => { setPage(1); }, [category, minPrice, maxPrice]);
+  useEffect(() => {
+    setPage(1);
+  }, [category, minPrice, maxPrice, sort]);
 
   useEffect(() => {
-    const controllers = new AbortController();
+    const controller = new AbortController();
     const t = setTimeout(async () => {
       try {
         setLoading(true);
         setErr("");
-        const res = await api.get("/products", { params, signal: controllers.signal });
-        const metaFromApi = res?.meta || res?.pagination || null;
-        setMeta(metaFromApi);
+        const res = await api.get("/products", {
+          params,
+          signal: controller.signal,
+        });
+        setMeta(res?.meta || res?.pagination || null);
         const safeItems = (res?.items ?? []).map((i) => ({
           id: i.id || i._id,
           shortDesc: i.shortDesc,
           slug: i.slug,
-          images: i.images?.[0]?.url ?? null,
+          image: i.images?.[0]?.url ?? null,
           category: i.category,
           price: i.price,
           name: i.name,
+          isActive: i.isActive,
         }));
         setAllproducts(safeItems);
-
       } catch (e) {
         if (e?.canceled) return;
         const msg = e?.msg || e?.message || e?.data?.error || "Network error";
         setErr(msg);
-      } finally { setLoading(false); }
+      } finally {
+        setLoading(false);
+      }
     }, 250);
-    return () => { controllers.abort(); clearTimeout(t); };
+
+    return () => {
+      controller.abort();
+      clearTimeout(t);
+    };
   }, [params]);
 
-  const categories = useMemo(() => getCategories(products), [products]);
+  const categories = useMemo(
+    () => getCategories(products, category),
+    [products, category]
+  );
 
-  
+  const filteredProducts = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) =>
+      [p.name, p.category, p.shortDesc]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(q))
+    );
+  }, [products, searchTerm]);
+
+  const totalProducts = meta?.total ?? products.length;
+  const totalPages = Math.max(1, meta?.totalPages ?? 1);
+  const currentPage = meta?.page ?? page;
+  const pageNumbers = useMemo(() => {
+    return Array.from({ length: Math.min(totalPages, 5) }, (_, index) => index + 1);
+  }, [totalPages]);
 
   const resetFilter = () => {
-    setMinPrice(0);
-    setMaxPrice(100);
+    setMinPrice("");
+    setMaxPrice("");
     setCategory("toutes");
     setSort("default");
+    setSearchTerm("");
   };
 
-  if (loading) {
-    return (
-      <main className="min-h-screen grid place-items-center bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-200">
-        <div className="flex items-center gap-3 text-sm">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-brand-600" />
-          Chargement…
-        </div>
-      </main>
-    );
-  }
-  if (err) {
-    return (
-      <main className="min-h-screen grid place-items-center bg-white text-red-600 dark:bg-slate-950 dark:text-red-400">
-        Erreur : {err}
-      </main>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-slate-50 dark:from-slate-950 dark:to-slate-900">
-      {/* Top bar */}
-      <header className="container mx-auto flex items-center justify-between px-4 py-4">
-        <div className="flex items-center gap-3">
-          <Image src={logo} alt="NodeShop" className="h-50 w-auto" priority />
-          <span className="sr-only">NodeShop</span>
-        </div>
-        <Link
-          href={"/login"}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
-        >
-          <LogIn className="h-4 w-4" />
-          Se connecter
-        </Link>
+    <div className="min-h-screen bg-white text-slate-950">
+      <header className="border-b border-slate-200 bg-white">
+        <nav className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <label className="relative flex min-h-12 w-full max-w-xl items-center">
+            <Search className="pointer-events-none absolute left-4 h-5 w-5 text-slate-400" />
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              type="search"
+              placeholder="Search products..."
+              className="h-12 w-full rounded-lg border border-slate-200 bg-white pl-12 pr-4 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+            />
+          </label>
+
+          <div className="flex items-center justify-end gap-5">
+            <button
+              type="button"
+              className="relative grid h-11 w-11 place-items-center rounded-lg text-slate-700 transition hover:bg-slate-50"
+              aria-label="Panier"
+            >
+              <ShoppingCart className="h-6 w-6" />
+              <span className="absolute right-1.5 top-1 grid h-5 min-w-5 place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-bold leading-none text-white">
+                {Math.min(products.length, 9)}
+              </span>
+            </button>
+
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-50"
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-slate-400 text-xs font-bold text-white">
+                AD
+              </span>
+              <span>Admin</span>
+              <ChevronDown className="h-4 w-4 text-slate-500" />
+            </Link>
+          </div>
+        </nav>
       </header>
 
-      <main>
-        {/* Hero */}
-        <section className="container mx-auto grid grid-cols-1 items-center gap-6 px-4 pb-10 pt-4 md:grid-cols-2">
-          <div className="order-2 md:order-1">
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
-              Bienvenue sur <span className="text-brand-600">NodeShop</span>
-            </h1>
-            <h2 className="mt-2 text-lg text-slate-600 dark:text-slate-300">Le shop moderne, simple et rapide</h2>
-            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-              NodeShop réunit le meilleur du minimalisme et du confort.
-            </p>
-            <button
-              onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}
-              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 active:bg-brand-800"
-            >
-              Découvrir nos produits
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-
-
-        </section>
-
-        {/* Filtres */}
-        <section className="container mx-auto px-4">
-          <div className="card p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-              <SlidersHorizontal className="h-4 w-4" />
-              Filtres
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <section className="mb-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+                Products
+              </h1>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                {totalProducts} products
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Catégorie</span>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="input"
-                >
-                  {categories.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Prix min</span>
-                <input
-                  type="number"
-                  placeholder="Entrez un nombre"
-                  min={0}
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
-                  className="input"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Prix max</span>
-                <input
-                  type="number"
-                  placeholder="Entrez un nombre"
-                  min={0}
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  className="input"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Trier par</span>
-                <select
-                  className="input"
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value)}
-                >
-                  <option value="default">Défaut</option>
-                  <option value="asc">Prix ↑</option>
-                  <option value="desc">Prix ↓</option>
-                </select>
-              </label>
-
-              <div className="flex items-end">
-                <button onClick={resetFilter} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
-                  <RotateCcw className="h-4 w-4" />
-                  Réinitialiser
-                </button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                aria-label="Afficher les filtres"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                <ChevronDown className="h-4 w-4 text-slate-500" />
+              </button>
+              <div
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-brand-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+              >
+                <Plus className="h-4 w-4" />
+                New Product
               </div>
             </div>
           </div>
-        </section>
 
-        {/* Produits */}
-        <section id="products" className="container mx-auto px-4 py-8">
-          <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">Nos produits</h3>
+          <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-[1.05fr_1.05fr_0.75fr_0.75fr_auto]">
+            <label className="relative">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="h-12 w-full appearance-none rounded-lg border border-slate-200 bg-white px-4 pr-10 text-sm font-medium text-slate-800 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+              >
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {formatCategory(c)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            </label>
 
-          {products.length === 0 ? (
-            <p className="card p-6 text-center text-sm text-slate-500 dark:text-slate-400">
-              Aucun produit disponible.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {products.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/products/${p.slug}`}
-                  className="group card p-3 transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <article>
-                    <div className="overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-                      <Image
-                        src={typeof p.images === "string" ? p.images : p.images?.url ?? "/placeholder.png"}
-                        alt={p.name}
-                        width={500}
-                        height={500}
-                        className="aspect-square w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                      />
-                    </div>
-                    <div className="mt-3 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-base font-semibold text-slate-900 dark:text-white">
-                          {currency.format(Number(p.price ?? 0))}
-                        </span>
-                        <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700 ring-1 ring-brand-100 dark:bg-brand-900/30 dark:text-brand-300 dark:ring-brand-900">
-                          {p.category}
-                        </span>
-                      </div>
-                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{p.name}</div>
-                      {p.shortDesc && <div className="line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{p.shortDesc}</div>}
-                    </div>
-                  </article>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+            <label className="relative">
+              <select
+                className="h-12 w-full appearance-none rounded-lg border border-slate-200 bg-white px-4 pr-10 text-sm font-medium text-slate-800 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+              >
+                <option value="default">All Status</option>
+                <option value="asc">Price ascending</option>
+                <option value="desc">Price descending</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            </label>
 
-        {/* Pagination */}
-        <div className="container mx-auto flex items-center justify-between px-4 pb-12">
-          <button
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={meta?.hasPrev === false || page <= 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Précédent
-          </button>
+            <input
+              type="number"
+              min={0}
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              placeholder="Min Price"
+              className="h-12 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+            />
 
-          <div className="text-sm text-slate-600 dark:text-slate-300">
-            Page {meta?.page ?? page} / {meta?.totalPages ?? "?"}
+            <input
+              type="number"
+              min={0}
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              placeholder="Max Price"
+              className="h-12 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
+            />
+
+            <button
+              type="button"
+              onClick={resetFilter}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-800"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Clear
+            </button>
           </div>
+        </section>
 
-          <button
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={meta?.hasNext === false || (meta?.totalPages ? page >= meta.totalPages : false)}
-          >
-            Suivant
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
+        {err && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
+            API indisponible pour le moment. Lance le backend pour charger le catalogue.
+          </div>
+        )}
+
+        {loading ? (
+          <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-[360px] animate-pulse rounded-lg border border-slate-200 bg-slate-100"
+              />
+            ))}
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-300 p-10 text-center">
+            <p className="text-sm font-semibold text-slate-800">
+              {err ? "Catalogue indisponible." : "Aucun produit disponible."}
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              {err
+                ? "Le frontend reste consultable, mais les produits dépendent de l’API."
+                : "Ajuste les filtres ou recharge les données de démonstration."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredProducts.map((product) => (
+              <Link
+                key={product.id}
+                href={`/products/${product.slug}`}
+                className="group overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
+              >
+                <article className="flex h-full flex-col">
+                  <div className="relative aspect-[1.18] bg-white">
+                    <span
+                      className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-md text-slate-500 transition hover:bg-white hover:text-slate-800"
+                      aria-label="Options produit"
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </span>
+                    {product.image ? (
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        fill
+                        className="object-cover transition duration-300 group-hover:scale-[1.03]"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center px-6 text-center text-sm font-medium text-slate-400">
+                        Image indisponible
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-1 flex-col p-4">
+                    <div className="min-w-0">
+                      <h2 className="line-clamp-2 text-base font-bold leading-5 text-slate-950">
+                        {product.name}
+                      </h2>
+                      {product.category && (
+                        <p className="mt-2 text-sm font-medium text-slate-500">
+                          {formatCategory(product.category)}
+                        </p>
+                      )}
+                    </div>
+
+                    <p className="mt-4 text-base font-bold text-slate-950">
+                      {currency.format(Number(product.price ?? 0))}
+                    </p>
+
+                    <div className="mt-auto flex items-center justify-between gap-3 pt-5 text-xs font-semibold">
+                      <span className="inline-flex items-center gap-1.5 text-slate-600">
+                        <span className="h-2 w-2 rounded-full bg-brand-600" />
+                        Product
+                      </span>
+                      <span
+                        className={
+                          product.isActive === false
+                            ? "inline-flex items-center gap-1.5 text-slate-400"
+                            : "inline-flex items-center gap-1.5 text-brand-700"
+                        }
+                      >
+                        <span
+                          className={
+                            product.isActive === false
+                              ? "h-2 w-2 rounded-full bg-slate-300"
+                              : "h-2 w-2 rounded-full bg-brand-600"
+                          }
+                        />
+                        {product.isActive === false ? "Inactive" : "In stock"}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {products.length > 0 && (
+          <div className="mt-8 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={meta?.hasPrev === false || page <= 1 || loading}
+              aria-label="Page précédente"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+
+            {pageNumbers.map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                onClick={() => setPage(pageNumber)}
+                className={
+                  pageNumber === currentPage
+                    ? "grid h-11 min-w-11 place-items-center rounded-lg bg-brand-50 px-4 text-sm font-bold text-brand-700"
+                    : "grid h-11 min-w-11 place-items-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                }
+              >
+                {pageNumber}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={
+                loading ||
+                meta?.hasNext === false ||
+                (meta?.totalPages ? page >= meta.totalPages : false)
+              }
+              aria-label="Page suivante"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
