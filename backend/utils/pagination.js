@@ -15,5 +15,5 @@
     const pages = Math.max(1, Math.ceil((total || 0) / (limit || 1)));
     const hasNext = page < pages;
     const hasPrev = page > 1;
-    return { hasNext, hasPrev, page, limit, total, sortBy, order };
+    return { hasNext, hasPrev, page, limit, total, totalPages: pages, sortBy, order };
   }

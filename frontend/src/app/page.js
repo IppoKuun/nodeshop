@@ -268,7 +268,7 @@ export default function Home() {
           <button
             className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
+            disabled={meta?.hasPrev === false || page <= 1}
           >
             <ChevronLeft className="h-4 w-4" />
             Précédent
@@ -281,7 +281,7 @@ export default function Home() {
           <button
             className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
             onClick={() => setPage((p) => p + 1)}
-            disabled={meta?.totalPages ? page >= meta.totalPages : false}
+            disabled={meta?.hasNext === false || (meta?.totalPages ? page >= meta.totalPages : false)}
           >
             Suivant
             <ChevronRight className="h-4 w-4" />
