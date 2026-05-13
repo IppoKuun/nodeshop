@@ -116,12 +116,3 @@ Pour un déploiement frontend/backend sur domaines séparés, configurer les coo
 - Comptes demo à garder avec rôle lecture seule.
 - Upload Cloudinary dépend d'une route backend protégée par session admin.
 
-## Screenshots
-
-Ajouter avant présentation portfolio :
-
-- Accueil catalogue
-- Page détail produit
-- Connexion admin
-- Admin produits
-- Audit logs
