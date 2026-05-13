@@ -91,7 +91,7 @@ app.use(
 
 app.use("/products", productRouter)
 app.use("/auth", authRouter)
-app.use("/audits", requireAuth(["owner", "admin"]), auditRouter)
+app.use("/audits", requireAuth(["owner", "admin", "viewer"]), auditRouter)
 app.post("/cloudinary/sign", checkOrigin, requireAuth(["owner", "admin"]), (req, res) => {
   const { folder } = req.body;
   const timestamp = Math.round(Date.now() / 1000);
