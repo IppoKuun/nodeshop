@@ -269,7 +269,7 @@ export default function Home() {
 
         {err && (
           <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800">
-            Serveur indisponible pour le moment
+            Le backend est déployé sur une instance gratuite Render. Au premier chargement, il peut mettre environ 50 secondes à se réveiller et à se connecter.
           </div>
         )}
 
@@ -289,7 +289,7 @@ export default function Home() {
             </p>
             <p className="mt-2 text-sm text-slate-500">
               {err
-                ? "Le frontend reste consultable, mais les produits dépendent de l’API."
+                ? "Patiente un instant puis recharge la page pour relancer la connexion à l’API."
                 : "Ajuste les filtres ou recharge les données de démonstration."}
             </p>
           </div>
